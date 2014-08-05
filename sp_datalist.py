@@ -35,13 +35,7 @@ class sp_datalist_handler:
 
 
     def get_index_by_fid(self, fid):
-        """
-        函数功能：判断是否存在该列表，存在返回序号，否则返回-1
-        :param fid: 列表的帧id
-        :return: 序号
-        """
         for i in range(0, len(self.data_list), 1):
-            # print "i={0}, value={1}".format(i, self.data_list[i][0])
             if self.data_list[i][0] == fid:
                 return i
         return -1
@@ -126,17 +120,6 @@ class sp_datalist_handler:
         index = self.get_index_by_fid(fid)
         if index < 0:
             return None
-        """
-        # print struct.unpack('<H', m_str)[0]
-        m_unt = sp_trans_unit()
-        if index >= 0 and len(self.data_list[index]) > 1:
-            m_unt.unpack_start_unit(self.data_list[index][1])
-            print u"datalen = {0:02X},{1:02X}, LEN={2}".format(ord(m_unt.fdatalen[0]), ord(m_unt.fdatalen[1]),
-                                                               struct.unpack('<H', m_unt.fdatalen)[0])
-            for i in range(2, len(self.data_list[index]), 1):
-                m_unt.unpack_normal_unit(self.data_list[index][i])
-                m_str += m_unt.fdata
-       """
         m_str = self.data_list[index][2]
         return m_str
 
@@ -157,8 +140,7 @@ class sp_tcp_unit:
 
 
     def get_check_sum(self, data, frame_index):
-        findex = struct.pack("B", frame_index)
-        tmp_sum = ord(findex)
+        tmp_sum = frame_index
         for i in range(0, len(data), 1):
             tmp_sum ^= ord(data[i])
         check_sum = struct.pack('B', tmp_sum)
@@ -181,13 +163,12 @@ class sp_tcp_unit:
     def get_hd_buffer(self):
         #data = '\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA\xBB\xCC\xDD\xEE\xFF\x12\x34\x56\x78\x9A\xBC\xDE\xF0'
         data = struct.pack("<3sBH2s500sB", self.guide_code, self.cmd_code, self.data_len, self.machine_addr, self.data, self.check_sum)
-        # 组第一帧
+        sp_log_data(data)
         print u"组第一个帧前LEN= {0}".format(len(data))
         tmp_data = struct.pack("<H", len(data))
         tmp_data += data[0:4]
         check_sum = self.get_check_sum(tmp_data, 0)
         pack_data = self.pack_one_frame(len(tmp_data), check_sum, 0, tmp_data)
-        #组中间的帧
         data = data[4:len(data)]
         print u"组完第一个帧后LEN= {0}".format(len(data))
         frame_index = 1
@@ -198,18 +179,24 @@ class sp_tcp_unit:
                 check_sum = self.get_check_sum(tmp_data, frame_index)
                 pack_data += self.pack_one_frame(len(tmp_data), check_sum, frame_index, tmp_data)
                 frame_index += 1
-        """
-        # 组最后一个帧
-        tmp_data = data[i:len(data)]
-        left_len = len(tmp_data)
-        print "i={0},left_len={1}".format(i, left_len)
-        if left_len > 0:
-            check_sum = self.get_check_sum(tmp_data, frame_index)
-            pack_data += self.pack_one_frame(left_len, check_sum, frame_index, tmp_data)
-        """
         print "=======pack_data====="
         print_hex(pack_data)
         return pack_data
+
+
+def sp_log_data(m_str):
+    path = u"data_logs"
+    title = u"{0}".format(datetime.date.today())
+    new_path = os.path.join(path, title)
+    if not os.path.isdir(new_path):
+        os.makedirs(new_path)
+    fileHandler = open(
+        new_path + "\\{0:02d}{1:02d}{2:02d}.log".format(datetime.datetime.now().hour, datetime.datetime.now().minute,
+                                              datetime.datetime.now().second), 'a')
+    fileHandler.write("数据总字节数={0}，分为{1}帧\n".format(len(m_str),len(m_str)/16))
+    for i in range(0, len(m_str), 1):
+        fileHandler.write("[{0:02x}]".format(ord(m_str[i])))
+    fileHandler.close()
 
 
 def sp_log(m_str):
@@ -219,7 +206,7 @@ def sp_log(m_str):
     if not os.path.isdir(new_path):
         os.makedirs(new_path)
     fileHandler = open(
-        new_path + "\\{0}-{1}-{2}.txt".format(datetime.datetime.now().hour, datetime.datetime.now().minute,
+        new_path + "\\{0:02d}{1:02d}{2:02d}.log".format(datetime.datetime.now().hour, datetime.datetime.now().minute,
                                               datetime.datetime.now().second), 'a')
     fileHandler.write("数据总字节数={0}，分为{1}帧\n".format(len(m_str),len(m_str)/16))
     for i in range(0, len(m_str), 1):
@@ -232,7 +219,6 @@ def sp_log(m_str):
 
 
 def print_hex(m_str):
-    # 打印下数据
     for i in range(0, len(m_str), 1):
         print "{0:02X},".format(ord(m_str[i])),
 
@@ -240,7 +226,6 @@ def print_hex(m_str):
 def do_sth_with_data(s, m_handler, fid):
     print u"==============处理数据：============="
     m_handler.print_data_list(fid)
-    # sp_log(m_handler.get_real_data(fid))
     m_tcp_unt = sp_tcp_unit()
     index = m_handler.get_index_by_fid(fid)
     if index < 0:
@@ -253,6 +238,8 @@ def do_sth_with_data(s, m_handler, fid):
     #解析数据
     m_tcp_unt.parse_data(data)
     print "解析出len={0}".format(m_tcp_unt.data_len)
+    m_tcp_unt.data = "\x00\x09\x00\x09\x00\x09\x00\x09"
+    m_tcp_unt.data_len = 256
     data = m_tcp_unt.get_hd_buffer()
     s.send(data)
     sp_log(data)
