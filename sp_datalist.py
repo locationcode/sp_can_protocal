@@ -193,7 +193,7 @@ def sp_log_data(m_str):
     fileHandler = open(
         new_path + "\\{0:02d}{1:02d}{2:02d}.log".format(datetime.datetime.now().hour, datetime.datetime.now().minute,
                                               datetime.datetime.now().second), 'a')
-    fileHandler.write("数据总字节数={0}，分为{1}帧\n".format(len(m_str),len(m_str)/16))
+    fileHandler.write("数据总字节数={0}\n".format(len(m_str)))
     for i in range(0, len(m_str), 1):
         fileHandler.write("[{0:02x}]".format(ord(m_str[i])))
     fileHandler.close()
@@ -239,7 +239,7 @@ def do_sth_with_data(s, m_handler, fid):
     m_tcp_unt.parse_data(data)
     print "解析出len={0}".format(m_tcp_unt.data_len)
     m_tcp_unt.data = "\x00\x09\x00\x09\x00\x09\x00\x09"
-    m_tcp_unt.data_len = 256
+    m_tcp_unt.data_len = 123
     data = m_tcp_unt.get_hd_buffer()
     s.send(data)
     sp_log(data)

@@ -49,8 +49,8 @@
       <file leaf-file-name="sp_datalist.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/sp_datalist.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.021212121" vertical-offset="3527" max-vertical-offset="5453">
-              <caret line="186" column="15" selection-start-line="186" selection-start-column="4" selection-end-line="186" selection-end-column="15" />
+            <state vertical-scroll-proportion="0.27575758" vertical-offset="2303" max-vertical-offset="5453">
+              <caret line="126" column="13" selection-start-line="126" selection-start-column="13" selection-end-line="126" selection-end-column="13" />
               <folding>
                 <element signature="e#15#41#0" expanded="true" />
               </folding>
@@ -430,7 +430,7 @@
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25055763" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2654275" sideWeight="0.6020583" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.39388794" sideWeight="0.49888477" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.39388794" sideWeight="0.49888477" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.39388794" sideWeight="0.50111526" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.34125638" sideWeight="0.49888477" order="2" side_tool="false" content_ui="tabs" />
@@ -723,8 +723,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/sp_datalist.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.021212121" vertical-offset="3527" max-vertical-offset="5453">
-          <caret line="186" column="15" selection-start-line="186" selection-start-column="4" selection-end-line="186" selection-end-column="15" />
+        <state vertical-scroll-proportion="0.27575758" vertical-offset="2303" max-vertical-offset="5453">
+          <caret line="126" column="13" selection-start-line="126" selection-start-column="13" selection-end-line="126" selection-end-column="13" />
           <folding>
             <element signature="e#15#41#0" expanded="true" />
           </folding>
