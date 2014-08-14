@@ -3,6 +3,8 @@ import sys, struct, socket
 import datetime
 import os
 
+FRAME_LENGTH = 16
+
 
 class sp_trans_unit:
     def __init__(self):
@@ -15,14 +17,14 @@ class sp_trans_unit:
 
 
     def unpack_normal_unit(self, recv_data):
-        if len(recv_data) != 16:
+        if len(recv_data) != FRAME_LENGTH:
             print "unpack_normal_unit len={0}".format(len(recv_data))
         else:
             self.flen, self.fid, self.fchecksum, \
             self.findex, self.fdata = struct.unpack("!2I2B6s", recv_data)
 
     def unpack_start_unit(self, recv_data):
-        if len(recv_data) != 16:
+        if len(recv_data) != FRAME_LENGTH:
             print "unpack_start_unit len={0}".format(len(recv_data))
         else:
             self.flen, self.fid, self.fchecksum, \
@@ -74,7 +76,7 @@ class sp_datalist_handler:
         elif len(self.data_list[index][2]) > total_len:
             print "接收到的数据总数超过首帧设定的总数"
             return 2
-        return 0
+        return 0  # 未接收完整个请求
 
 
     def insert_into_list(self, s, pass_unt, buf):
@@ -89,7 +91,7 @@ class sp_datalist_handler:
             pass_unt.unpack_normal_unit(buf)
             ret = self.append_normal_data(pass_unt.fid, pass_unt.fdata)
         if ret == 2:  # 最后一个帧
-            do_sth_with_data(s, self, pass_unt.fid)
+            do_something_with_data(s, self, pass_unt.fid)
             self.clear_list_elems(pass_unt.fid)
         else:
             self.data_list[index].append(buf)
@@ -124,6 +126,9 @@ class sp_datalist_handler:
         return m_str
 
 
+DATA_CPY_STR = "<3sBH2s207sB"
+
+
 class sp_tcp_unit:
     def __init__(self):
         self.guide_code = '\x00\x00\x00'  # 引导码
@@ -136,10 +141,11 @@ class sp_tcp_unit:
 
     def parse_data(self, data):
         self.guide_code, self.cmd_code, self.data_len, self.machine_addr, self.data, self.check_sum = struct.unpack(
-            "<3sBH2s500sB", data)
+            DATA_CPY_STR, data)
 
 
-    def get_check_sum(self, data, frame_index):
+    @staticmethod
+    def get_check_sum(data, frame_index):
         tmp_sum = frame_index
         for i in range(0, len(data), 1):
             tmp_sum ^= ord(data[i])
@@ -155,65 +161,76 @@ class sp_tcp_unit:
         findex = struct.pack("B", frame_index)
         pack_data += findex
         pack_data += data
-        while len(pack_data) < 16:
+        while len(pack_data) < FRAME_LENGTH:
             pack_data += "\x00"
         return pack_data
 
 
     def get_hd_buffer(self):
-        #data = '\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA\xBB\xCC\xDD\xEE\xFF\x12\x34\x56\x78\x9A\xBC\xDE\xF0'
-        data = struct.pack("<3sBH2s500sB", self.guide_code, self.cmd_code, self.data_len, self.machine_addr, self.data, self.check_sum)
-        sp_log_data(data)
-        print u"组第一个帧前LEN= {0}".format(len(data))
+        # data = '\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA\xBB\xCC\xDD\xEE\xFF\x12\x34\x56\x78\x9A\xBC\xDE\xF0'
+        data = struct.pack(DATA_CPY_STR, self.guide_code, self.cmd_code, self.data_len, self.machine_addr, self.data,
+                           self.check_sum)
+        sp_brief_log(data, True)
+        # print u"组第一个帧前LEN= {0}".format(len(data))
         tmp_data = struct.pack("<H", len(data))
         tmp_data += data[0:4]
         check_sum = self.get_check_sum(tmp_data, 0)
         pack_data = self.pack_one_frame(len(tmp_data), check_sum, 0, tmp_data)
         data = data[4:len(data)]
-        print u"组完第一个帧后LEN= {0}".format(len(data))
+        # print u"组完第一个帧后LEN= {0}".format(len(data))
         frame_index = 1
         if len(data) > 6:
             for i in range(0, len(data), 6):
                 tmp_data = data[i:i + 6]
-                print u"i={0},len(tmp_data)={1}".format(i, len(tmp_data))
+                # print u"i={0},len(tmp_data)={1}".format(i, len(tmp_data))
                 check_sum = self.get_check_sum(tmp_data, frame_index)
                 pack_data += self.pack_one_frame(len(tmp_data), check_sum, frame_index, tmp_data)
                 frame_index += 1
-        print "=======pack_data====="
-        print_hex(pack_data)
+        # print "=======pack_data====="
+        #print_hex(pack_data)
         return pack_data
 
 
-def sp_log_data(m_str):
-    path = u"data_logs"
+def sp_brief_log(m_str, issend):
+    path = u"logs"
     title = u"{0}".format(datetime.date.today())
     new_path = os.path.join(path, title)
+    if issend:
+        sub_title = u"send_brief_logs"
+    else:
+        sub_title = u"recv_brief_logs"
+    new_path = os.path.join(new_path, sub_title)
     if not os.path.isdir(new_path):
         os.makedirs(new_path)
     fileHandler = open(
         new_path + "\\{0:02d}{1:02d}{2:02d}.log".format(datetime.datetime.now().hour, datetime.datetime.now().minute,
-                                              datetime.datetime.now().second), 'a')
+                                                        datetime.datetime.now().second), 'a')
     fileHandler.write("数据总字节数={0}\n".format(len(m_str)))
     for i in range(0, len(m_str), 1):
         fileHandler.write("[{0:02x}]".format(ord(m_str[i])))
     fileHandler.close()
 
 
-def sp_log(m_str):
+def sp_detail_log(m_str, issend):
     path = u"logs"
     title = u"{0}".format(datetime.date.today())
     new_path = os.path.join(path, title)
+    if issend:
+        sub_title = u"send_detail_logs"
+    else:
+        sub_title = u"recv_detail_logs"
+    new_path = os.path.join(new_path, sub_title)
     if not os.path.isdir(new_path):
         os.makedirs(new_path)
     fileHandler = open(
         new_path + "\\{0:02d}{1:02d}{2:02d}.log".format(datetime.datetime.now().hour, datetime.datetime.now().minute,
-                                              datetime.datetime.now().second), 'a')
-    fileHandler.write("数据总字节数={0}，分为{1}帧\n".format(len(m_str),len(m_str)/16))
+                                                        datetime.datetime.now().second), 'a')
+    fileHandler.write("数据总字节数={0}，分为{1}帧\n".format(len(m_str), len(m_str) / FRAME_LENGTH))
     for i in range(0, len(m_str), 1):
         if i % 4 == 0:
             fileHandler.write("\n")
-        if i % 16 == 0:
-            fileHandler.write("第{0}帧==================\n".format(i/16+1))
+        if i % FRAME_LENGTH == 0:
+            fileHandler.write("第{0}帧==================\n".format(i / FRAME_LENGTH + 1))
         fileHandler.write("[{0:02x}]".format(ord(m_str[i])))
     fileHandler.close()
 
@@ -223,9 +240,9 @@ def print_hex(m_str):
         print "{0:02X},".format(ord(m_str[i])),
 
 
-def do_sth_with_data(s, m_handler, fid):
-    print u"==============处理数据：============="
-    m_handler.print_data_list(fid)
+def do_something_with_data(s, m_handler, fid):
+    # print u"==============处理数据：============="
+    # m_handler.print_data_list(fid)
     m_tcp_unt = sp_tcp_unit()
     index = m_handler.get_index_by_fid(fid)
     if index < 0:
@@ -233,25 +250,38 @@ def do_sth_with_data(s, m_handler, fid):
     data_valid_len = m_handler.data_list[index][1]
     data = m_handler.data_list[index][2]
     data = data[0:data_valid_len]
-    print u"截取后"
-    print_hex(data)
+    # print u"截取后的数据"
+    # print_hex(data)
     #解析数据
+    sp_brief_log(data, False)
     m_tcp_unt.parse_data(data)
-    print "解析出len={0}".format(m_tcp_unt.data_len)
+    print "解析出data_len={0}".format(m_tcp_unt.data_len)
     m_tcp_unt.data = "\x00\x09\x00\x09\x00\x09\x00\x09"
-    m_tcp_unt.data_len = 123
+    m_tcp_unt.data_len = m_tcp_unt.data_len / 2 + 1
     data = m_tcp_unt.get_hd_buffer()
     s.send(data)
-    sp_log(data)
+    sp_detail_log(data, True)
 
 
 def handle_recv_data(s, m_handler, buf):
-    if len(buf) == 16:
+    if len(buf) == FRAME_LENGTH:
         m_unt = sp_trans_unit()
         m_unt.unpack_start_unit(buf)
         m_handler.insert_into_list(s, m_unt, buf)
     else:
         print u"长度不对！len={0}".format(len(buf))
+
+
+def process_buffer(client, buffer, handler):
+    offset = 0
+    process_length = 0
+    buffer_len = len(buffer)
+    while offset < buffer_len:
+        if buffer_len - offset >= FRAME_LENGTH:
+            handle_recv_data(client, handler, buffer[offset: offset + FRAME_LENGTH])
+            process_length += FRAME_LENGTH
+        offset += FRAME_LENGTH
+    return process_length
 
 
 def recv_from_pos():
@@ -260,19 +290,16 @@ def recv_from_pos():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((host, port))
     m_handler = sp_datalist_handler()
+    recieved_buffer = ""
     while 1:
         buf = s.recv(1024)
-        if len(buf) == 16:
-            handle_recv_data(s, m_handler, buf)
-        elif len(buf) % 16 == 0:
-            while len(buf) > 16:
-                print "elif len={0}".format(len(buf))
-                tmp_buf = buf[0:16]
-                handle_recv_data(s, m_handler, tmp_buf)
-                buf = buf[16:len(buf)]
-            handle_recv_data(s, m_handler, buf)
-        else:
-            print "buf 长度不为16或者16的倍数，为{0}".format(len(buf))
+        if not buf:
+            print u"buf 长度不为16或者16的倍数，为{0}".format(len(buf))
+            break
+        recieved_buffer += buf
+        process_length = process_buffer(s, recieved_buffer, m_handler)
+        if process_length > 0:
+            recieved_buffer = recieved_buffer[process_length:]
     s.close()
 
 
